@@ -54,5 +54,33 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true } // createdAt, updatedAt
 )
+userSchema.pre('save',async function(){
 
-export default mongoose.model('User', userSchema)
+  if(!(this.isModified('password'))){
+      return
+  }
+
+  this.password= await bcrypt.hash(this.password,10)
+  return
+
+})
+
+
+userSchema.methods.isValidatedPassword = async function(userSendPassword){
+  return await bcrypt.compare(userSendPassword,this.password)
+}
+
+
+userSchema.methods.getJwtToken = function(){
+  return jwt.sign(
+      {    
+          id:this.id,
+          name:this.name,
+          role:this.role
+      },
+      process.env.JWT_SECRET,
+      {expiresIn:'8h'}
+  )
+} 
+
+module.exports =  mongoose.model('User', userSchema);

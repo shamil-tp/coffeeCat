@@ -22,13 +22,16 @@
           this.avatar = file
           this.avatarPreview = URL.createObjectURL(file)
         },
-        signup() {
+        async signup() {
+
+          const res = await api.post()
           console.log({
             name: this.name,
             username: this.username,
             email: this.email,
             password: this.password,
-            avatar: this.avatar
+            avatar: this.avatar,
+            // url:this.avatarPreview
           })
         }
       }
@@ -36,7 +39,7 @@
     </script>
     
     <template>
-      <div class="auth-page">
+      <form class="auth-page" @submit.prevent="signup">
         <div class="auth-card">
     
           <!-- DP UPLOAD -->
@@ -86,14 +89,14 @@
             v-model="password"
           />
     
-          <button @click="signup">Sign Up</button>
+          <button type="submit">Sign Up</button>
     
           <p class="switch">
             Already have an account?
             <router-link to="/login">Log in</router-link>
           </p>
         </div>
-      </div>
+      </form>
     </template>
     
     <style scoped>

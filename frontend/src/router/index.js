@@ -15,7 +15,7 @@ const routes = [
     component: MainLayout,
     children: [
       {
-        path: 'profile',
+        path: '',
         component: Profile,
         meta:{navBar:true},
 

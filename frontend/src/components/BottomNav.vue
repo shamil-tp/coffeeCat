@@ -17,7 +17,7 @@
     </router-link>
 
     <!-- Right -->
-    <router-link to="/profile" class="nav-link">
+    <router-link to="/" class="nav-link">
       <i class="bi bi-person-circle"></i>
     </router-link>
 

@@ -5,6 +5,7 @@ const connectDB = require('./config/db')
 const cookieParser = require('cookie-parser')
 const cors = require("cors");
 const fileUpload = require('express-fileupload')
+const connectCloudinary = require('./config/cloudinary')
 
 const app = express()
 
@@ -20,6 +21,10 @@ app.use(fileUpload({
     useTempFiles : true,
     tempFileDir : '/tmp/'
 }));
+
+const authRotue = require('/routes/authRoutes')
+
+app.use('/api',auth)
 
 app.get("/run-test-backend",(req,res)=>{
     return res.send(`<h1 style="text-align:center;font-size:100px;font-weight:700;color:aqua;">backend is running successfully on evenode</h1>`)
