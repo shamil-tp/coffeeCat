@@ -5,17 +5,22 @@ const sendCookie = async (user, res) => {
             expires: new Date(Date.now() + (7 * 60 * 60 * 1000)),
             httpOnly: true,
             secure:false,
-            sameSite:'Lax'
+            sameSite:'Lax',
+            path:'/'
         }
   
         return res.cookie('token', token, options).status(200).json({
             message: 'Login Successful',
-            token: token,
-            user:user
+            success:true
         })
     } catch (e) {
         console.log('error while generating cookie')
         console.log(e)
+        return res.status(500).json({
+            message:'Cookie Not generated',
+            success:false
+        })
+        
     }
 }
 

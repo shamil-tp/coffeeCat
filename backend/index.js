@@ -11,10 +11,22 @@ const app = express()
 
 
 app.use(cookieParser())
+
+
+
+// const allowedOrigins = [
+//   "http://localhost:5173",
+//   "http://192.168.29.178:5173"
+// ];
+
 app.use(cors({
-    origin: "http://localhost:5173",
-    credentials: true
+  origin:process.env.FRONTEND_URL,
+  credentials: true
 }));
+
+
+
+
 app.use(express.urlencoded())
 app.use(express.json())
 app.use(fileUpload({
@@ -22,9 +34,12 @@ app.use(fileUpload({
     tempFileDir : '/tmp/'
 }));
 
-const authRotue = require('/routes/authRoutes')
+const authRotue = require('./routes/authRoute')
+const {isLoggedin} = require('./middlewares/authMiddleware')
+const mainRoute = require('./routes/mainRoute')
 
-app.use('/api',auth)
+app.use('/api',authRotue)
+app.use('/api',isLoggedin,mainRoute)
 
 app.get("/run-test-backend",(req,res)=>{
     return res.send(`<h1 style="text-align:center;font-size:100px;font-weight:700;color:aqua;">backend is running successfully on evenode</h1>`)
@@ -38,7 +53,7 @@ app.use((req, res) => {
 const port = process.env.PORT || 3000
 
 app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`)
+    console.log(`Server running on http://192.168.29.178:${port}`)
     connectDB()
     connectCloudinary()
 });

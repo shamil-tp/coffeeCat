@@ -1,7 +1,14 @@
-import mongoose from 'mongoose'
+const mongoose = require('mongoose')
+const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
 
 const userSchema = new mongoose.Schema(
   {
+    dpid:{
+      type:String,
+      required:true,
+      unique:true,
+    },
     name: {
       type: String,
       required: true,
@@ -76,7 +83,7 @@ userSchema.methods.getJwtToken = function(){
       {    
           id:this.id,
           name:this.name,
-          role:this.role
+          username:this.username
       },
       process.env.JWT_SECRET,
       {expiresIn:'8h'}

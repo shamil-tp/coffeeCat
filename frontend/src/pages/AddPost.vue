@@ -1,12 +1,21 @@
 <script>
+import api from '@/services/api';
+import { mapGetters } from 'vuex';
+
   export default {
     name: 'AddPost',
     data() {
       return {
+        loading:false,
         imageFile: null,
         imagePreview: null,
         caption: ''
       }
+    },
+    computed:{
+      ...mapGetters('auth',{
+        user:'userDetails'
+      })
     },
     methods: {
       onImageSelect(e) {
@@ -16,17 +25,31 @@
         this.imageFile = file
         this.imagePreview = URL.createObjectURL(file)
       },
-      submitPost() {
+      async submitPost() {
+        this.loading = true
         if (!this.imageFile) {
           alert('Please select an image')
           return
         }
-  
+        if (!this.user) {
+      alert('User not loaded yet. Please wait or refresh.')
+      return
+    }
+        const formData = new FormData()
+        formData.append('caption',this.caption)
+        formData.append('post',this.imageFile)
+        let res = await api.post('/uploadpost',formData)
         console.log('Image:', this.imageFile)
         console.log('Caption:', this.caption)
+        console.log('User: ',this.user)
   
         // later → API call
+        this.loading = false
+        this.$router.push('/')
       }
+    },
+    created(){
+      console.log(this.user)
     }
   }
   </script>
@@ -62,7 +85,9 @@
 
     <!-- Button -->
     <button class="post__btn" @click="submitPost">
-      Add Post
+
+      <font-awesome-icon icon="spinner" spin v-if="loading" />
+              <span v-else>Add Post</span>
     </button>
 
   </div>

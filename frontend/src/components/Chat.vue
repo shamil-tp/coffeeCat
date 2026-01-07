@@ -1,23 +1,22 @@
 <script>
+import api from '@/services/api';
+
   export default {
     name: 'Chat',
     data() {
       return {
+        id:null,
+        userId:null,
         message: '',
         isFocused: false,
-        user: {
-          name: 'Jason',
-          username: 'jason_dev'
-        }
+        user: null,
+        backClicked: false
       }
     },
     computed: {
       showSend() {
         return this.isFocused || this.message.length > 0
       },
-      avatarUrl() {
-        return `https://api.dicebear.com/7.x/avataaars/svg?seed=${this.user.username}`
-      }
     },
     methods: {
       sendMessage() {
@@ -26,8 +25,26 @@
         this.message = ''
       },
       goBack() {
-        this.$router.back()
+    this.backClicked = true
+
+    // small delay so icon change is visible
+    setTimeout(() => {
+      this.$router.back()
+    }, 1000)
+  },
+      async fetchUserChat(){
+        try{
+          let res = await api.get(`/find-user-chat/${this.$route.params.id}`)
+          this.user = res.data.user
+          console.log(res.data.success)
+        }catch(e){
+          console.log(e)
+          return console.log()
+        }
       }
+    },
+    mounted(){
+      this.fetchUserChat()
     }
   }
   </script>
@@ -35,10 +52,19 @@
   <div class="chat-page">
 
     <!-- 🔥 CHAT HEADER -->
-    <div class="chat-header">
-      <i class="bi bi-arrow-left" @click="goBack"></i>
+    <div class="chat-header" v-if="user">
+      <!-- <i class="bi bi-arrow-left" @click="goBack"></i> -->
+      <!-- <router-link :to="this.router.back()" > -->
+        <font-awesome-icon
+  :icon="backClicked ? ['fas','angles-left'] : ['fas','angle-left']"
+  class="angle"
+  size="lg"
+  @click="goBack"
+/>
 
-      <img :src="avatarUrl" class="avatar" />
+      <!-- </router-link> -->
+
+      <img :src="user.avatar" class="avatar" />
 
       <p class="name">{{ user.name }}</p>
     </div>
@@ -100,9 +126,24 @@
   cursor: pointer;
 }
 
+.angle{
+  color: rgb(255, 222, 179);
+  cursor: pointer;
+}
+.angle {
+  transition:color .7 ease , transform .5 ease-in-out;
+}
+
+.angle:active {
+  color: rgb(96, 54, 0);
+  transform: scale(0.9);
+}
+
+
 .chat-header .avatar {
   width: 36px;
   height: 36px;
+  object-fit: cover;
   border-radius: 50%;
 }
 

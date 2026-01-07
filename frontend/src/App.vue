@@ -1,8 +1,16 @@
 <script>
   import BottomNav from '@/components/BottomNav.vue'
+import { mapActions, mapGetters } from 'vuex';
+
   
   export default {
-    components: { BottomNav }
+    components: { BottomNav },
+    methods:{
+      ...mapActions('auth',['fetchUser','logout'])
+    },
+    created(){
+      this.fetchUser()
+    }
   }
   </script>
   

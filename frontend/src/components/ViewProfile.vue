@@ -1,41 +1,13 @@
 <script>
 import api from '@/services/api';
 import post from '@/store/modules/post';
-import { mapActions, mapGetters } from 'vuex';
+import { mapGetters } from 'vuex';
 export default {
-  name: 'Profile',
+  name: 'ViewProfile',
   data() {
     return {
-      // user: {
-      //   name: 'Jacob West',
-      //   username: 'pixsellz',
-      //   bio: 'Digital goodies designer\nEverything is designed.',
-      //   posts: 54,
-      //   followers: 834,
-      //   following: 162
-      // },
-      // user:null,
+        profile:null,
       activeTab: 'grid',
-      // posts: [
-      //   {
-      //     id: 1,
-      //     img: 'https://picsum.photos/id/1015/400/400',
-      //     likes: 128,
-      //     comments: 24
-      //   },
-      //   {
-      //     id: 2,
-      //     img: 'https://picsum.photos/id/1016/400/400',
-      //     likes: 86,
-      //     comments: 12
-      //   },
-      //   {
-      //     id: 3,
-      //     img: 'https://picsum.photos/id/1021/400/400',
-      //     likes: 210,
-      //     comments: 40
-      //   }
-      // ],
       posts:[],
       showOptions: null,
       showSettings: false,
@@ -47,109 +19,127 @@ export default {
     toggleOptions(id) {
       this.showOptions = this.showOptions === id ? null : id
     },
-    showSettingsModal(id) {
-      this.showSettings = !(this.showSettings)
-    },
-    toggleLike(id) {
-      this.showLike = !(this.showLike)
-      // this.showLike? this.posts.find(e => e.id == id).likes ++ : this.posts.find(e => e.id == id).likes --
-      this.posts.find(e => e.id == id).likes += this.showLike ? 1 : -1
-    },
-    async handleLogout() {
-      try {
-        // const res = await api.get('/logout')
-        setTimeout(() => {
-          console.log("loading..")
-        }, 1000)
-        await this.logout()
-        this.logoutStatus = this.loggedIn
-
-        this.$router.push('/login')
-
-      } catch (e) {
+    async startMessage(){
+      try{
+        let res = await api.post(`/chat/user/${this.profile._id}`)
+        this.$router.push(`/chat/${res.data.chat._id}`)
+        console.log(res.data.chat)
+      }catch(e){
         console.log(e)
-        console.log('logout failed')
       }
     },
-    // async userCall(){
-    //   const res = await api.get('/profile')
-    //   console.log(res.data.data)
-    //   this.user = res.data.data
-    // },
-    ...mapActions("auth", ["fetchUser", "logout"]),
+    async toggleLike(id) {
+      //    THIS IS ADDING LIKES STATIC
+      // this.showLike = !(this.showLike)
+      // this.showLike? this.posts.find(e => e.id == id).likes ++ : this.posts.find(e => e.id == id).likes --
+      // this.posts.find(e => e.id == id).likes += this.showLike ? 1 : -1
+
+      //    OPTIMISTIC UI
+
+      const post = this.posts.find(p => p._id === id);
+      if (!post) return;
+
+      const currentUserId = this.currentUser._id;
+
+      if (post.likes.includes(currentUserId)) {
+        post.likes = post.likes.filter(uid => uid !== currentUserId);
+      } else {
+        post.likes.push(currentUserId);
+      }
+      
+      
+      //    ADDING LIKES DYNAMIC
+      let res = await api.post(`/toggle-like/${id}`)
+      // this.showLike = this.posts.find( post => post._id == id).likes.includes(this.currentUser._id)
+      
+      console.log(res.data.message)
+    },
+    async getUserDetails(){
+        try{
+            let res = await api.get(`/get-profiledetails/${this.$route.params.id}`)
+            this.profile = res.data.profile
+
+        }catch(e){
+            console.log(e)
+        }
+    },
     editProfile() {
       setTimeout(() => {
         this.$router.push('/edit-profile')
       }, 1000)
     },
-    async shareProfile() {
-      const userId = this.user._id
-      const url = `${window.location.origin}/chat/${userId}`
-
-      // Try modern clipboard API first
-      if (navigator.clipboard && window.isSecureContext) {
-        try {
-          await navigator.clipboard.writeText(url)
-          alert('Chat link copied to clipboard!')
-          return
-        } catch (err) {
-          console.warn('Clipboard API failed, using fallback')
-        }
-      }
-
-      // ✅ Fallback (WORKS 100%)
-      const textarea = document.createElement('textarea')
-      textarea.value = url
-      textarea.style.position = 'fixed'
-      textarea.style.left = '-9999px'
-      document.body.appendChild(textarea)
-      textarea.select()
-      document.execCommand('copy')
-      document.body.removeChild(textarea)
-
-      alert('Chat link copied to clipboard!')
-    },
     async fetchPosts(){
       try{
-        let res = await api.get(`/userposts/${this.user._id}`)
+        let res = await api.get(`/userposts/${this.$route.params.id}`)
         this.posts = res.data.posts
       }catch(e){
         console.log(e)
       }
-    }
+    },
+    async handleFollow() {
+      if (!this.currentUser) return alert("Please login to follow");
 
+      // 1. Store the previous state in case api fails
+      const previousFollowers = [...this.profile.followers];
+
+      try {
+        // 2. OPTIMISTIC UI UPDATE (Update screen immediately before waiting for server)
+        if (this.isFollowing) {
+           // If unfollowing: Filter my ID out
+           this.profile.followers = this.profile.followers.filter(id => id !== this.currentUser._id);
+        } else {
+           // If following: Push my ID in
+           this.profile.followers.push(this.currentUser._id);
+        }
+
+        // 3. Call the API
+        await api.post(`/toggle-follow/${this.profile._id}`, {
+          currentUserId: this.currentUser._id
+        });
+
+      } catch (e) {
+        console.log(e);
+        // If server fails, revert the change
+        this.profile.followers = previousFollowers;
+      }
+    },
+    
 
   },
   computed: {
     ...mapGetters("auth", {
-      user: "userDetails",
+      currentUser: "userDetails",
       loggedIn: "isLoggedIn"
-    })
+    }),
+    isFollowing() {
+      if (!this.profile || !this.currentUser || !this.profile.followers) return false;
+      // Check if my ID exists in the profile's followers array
+      return this.profile.followers.includes(this.currentUser._id);
+    }
   },
   created() {
     // this.userCall()
-    this.fetchUser().then(this.fetchPosts)
+    this.getUserDetails().then(this.fetchPosts)
+  },
+  watch: {
+    '$route.params.id': function(newId) {
+        if(newId) {
+            this.profile = null; // Reset to show loading state
+            this.posts = [];
+            this.getUserDetails();
+            this.fetchPosts();
+        }
+    }
   }
+  
 }
 </script>
 
 <template>
-  <div class="profile-page" v-if="user">
+  <div class="profile-page" v-if="profile">
     <!-- HEADER -->
     <div class="profile__header">
-      <i class="bi bi-gear settings__icon" @click="showSettingsModal(3)"></i>
-      <div v-show="showSettings" class="settings__options-container">
-        <p class="text-danger" style="border-bottom:2px solid rgb(77, 31, 5)"><i class="bi bi-trash"></i> Delete Account
-        </p>
-        <p class="text-danger" @click="handleLogout">
-        <div class="spinner-border spinner-border-sm" role="status" v-if="this.logoutStatus"
-          :style="{ color: '#ff6b6b' }">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-        <i class="bi bi-power" v-else></i>
-        Log out</p>
-      </div>
-      <p>{{ user.name }}</p>
+      <p>{{ profile.name }}</p>
       <span></span>
     </div>
 
@@ -157,35 +147,41 @@ export default {
     <div class="profile__info">
       <div class="profile__top">
         <div class="avatar">
-          <img :src="user.avatar" />
+          <img :src="profile.avatar" />
         </div>
 
         <div class="stats">
           <div class="stat">
-            <p class="number">{{ posts.length}}</p>
+            <p class="number">{{ posts.length }}</p>
             <p>Posts</p>
           </div>
           <div class="stat">
-            <p class="number">{{ user.followers.length }}</p>
+            <p class="number">{{ profile.followers.length }}</p>
             <p>Followers</p>
           </div>
           <div class="stat">
-            <p class="number">{{ user.following.length }}</p>
+            <p class="number">{{ profile.following.length }}</p>
             <p>Following</p>
           </div>
         </div>
       </div>
 
       <div class="bio">
-        <p class="name">{{ user.name }}</p>
-        <p class="username">@{{ user.username }}</p>
-        <p class="bio-text">{{ user.bio }}</p>
+        <p class="name">{{ profile.name }}</p>
+        <p class="username">@{{ profile.username }}</p>
+        <p class="bio-text">{{ profile.bio }}</p>
       </div>
 
       <div class="actions">
-        <button class="edit" @click="editProfile">Edit Profile</button>
-        <button class="share" @click="shareProfile">Share</button>
-      </div>
+    <button 
+      :class="['edit', { 'following-style': isFollowing }]" 
+      @click="handleFollow"
+    >
+      {{ isFollowing ? 'Unfollow' : 'Follow' }}
+    </button>
+    
+    <button class="share" @click="startMessage">Message</button>
+</div>
     </div>
 
     <!-- POSTS -->
@@ -214,8 +210,8 @@ export default {
           <div v-for="post in posts" :key="post._id" class="viewer-post">
             <div class="post__header">
               <div class="post__avatar--container">
-                <img :src="user.avatar" alt="">
-                <span>{{ user.name }}</span>
+                <img :src="profile.avatar" alt="">
+                <span>{{ profile.name }}</span>
               </div>
 
               <div class="right">
@@ -236,7 +232,7 @@ export default {
             <div class="post-actions">
               <div class="left">
                 <span>
-                  <i class="bi" :class="showLike ? 'bi-heart-fill' : 'bi-heart'" @click="toggleLike(post._id)"></i> {{
+                  <i class="bi" :class="post.likes.includes(this.currentUser._id) ? 'bi-heart-fill' : 'bi-heart'" @click="toggleLike(post._id)"></i> {{
                   post.likes.length }}
                 </span>
                 <span>
@@ -244,8 +240,6 @@ export default {
                   {{ post.commentsCount }}
                 </span>
               </div>
-
-
             </div>
           </div>
         </div>
@@ -257,28 +251,19 @@ export default {
 <style scoped>
 .profile-page {
   background: rgb(32, 17, 6);
-  
-  /* ❌ Remove this: */
-  /* min-height: 100vh; */
-
-  /* ✅ Add this: */
-  height: 100vh;        /* Limits the div to the screen height */
-  overflow-y: auto;     /* Enables scrolling INSIDE this div */
-  padding-bottom: 90px; /* Keeps space for your bottom nav */
-}
-
-/* Optional: Hide scrollbar for a cleaner mobile-app look */
-.profile-page::-webkit-scrollbar {
-  display: none;
+  min-height: 100vh;
+  padding-bottom: 90px;
 }
 
 /* HEADER */
 .profile__header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 0.8rem 1rem;
   color: rgb(255, 222, 179);
+  font-size: .8rem;
+  font-weight: 700;
   /* position: relative; */
 }
 
@@ -427,6 +412,16 @@ export default {
   color: rgb(51, 34, 28);
   border: 1px solid transparent;
   transform: scale(1.03);
+}
+/* Style for when you are already following */
+.following-style {
+    background: transparent;
+    border: 1px solid #ffb78e;
+    color: #ffb78e;
+}
+.following-style:hover {
+    background: rgba(255, 183, 142, 0.1);
+    color: #ffb78e;
 }
 
 /* TABS */
