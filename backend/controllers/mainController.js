@@ -4,6 +4,7 @@ const Comment = require('../models/Comment');
 const Chat = require('../models/Chat')
 const Message = require('../models/Message')
 const uploadImage = require("../utils/uploadImage");
+const cloudinary = require('cloudinary').v2;
 
 exports.UserDetails = async (req, res) => {
   try {
@@ -446,3 +447,139 @@ exports.GetAllUserChats = async (req, res) => {
     return res.status(500).json({ error: e.message, success: false });
   }
 }
+exports.DeletePost = async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const userId = req.user.id; 
+
+    console.log("post and user id : ",postId,userId)
+
+    // 1. Find the post
+    const post = await Post.findById(postId);
+    
+    if (!post) {
+      return res.status(404).json({ success: false, message: "Post not found" });
+    }
+
+    // 2. Security Check: Are you the owner?
+    if (post.user.toString() !== userId.toString()) {
+      return res.status(401).json({ success: false, message: "Unauthorized action" });
+    }
+
+    // 3a. Delete Image
+if (post.image && post.image.publicId) {
+    await cloudinary.uploader.destroy(post.image.publicId);
+    console.log("deleted")
+
+}
+
+// 3b. Delete associated Comments (Assuming you have a Comment model)
+await Comment.deleteMany({ post: postId });
+
+    // 3. Delete the Post
+    await Post.findByIdAndDelete(postId);
+
+    // 4. Clean up: Remove the ID from the User's "posts" array
+    // await User.findByIdAndUpdate(userId, {
+    //   $pull: { posts: postId }
+    // });
+
+    return res.json({ success: true, message: "Post deleted successfully" });
+
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+exports.DeleteAccount = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const userId = req.user._id;
+
+    // 1. DEFINE USER FOLDER PATH
+    // ⚠️ CHANGE THIS to match exactly how you named your folders!
+    // Example: if you save to "coffeeCat/users/64a9f...", use that here.
+    const userFolderPath = `coffeeCat/users/${userId}`; 
+
+    // ======================================================
+    // 2. CLOUDINARY WIPE (The Optimized Part)
+    // ======================================================
+    try {
+      // Step A: Delete all images INSIDE the folder
+      await cloudinary.api.delete_resources_by_prefix(userFolderPath);
+      
+      // Step B: Delete the empty folder itself
+      await cloudinary.api.delete_folder(userFolderPath);
+      
+    } catch (cloudError) {
+      // If folder is already empty or doesn't exist, just log it and continue.
+      // We don't want to stop the account deletion just because the folder was missing.
+      console.log("Cloudinary folder cleanup warning:", cloudError.message);
+    }
+
+    // ======================================================
+    // 3. DATABASE CLEANUP (Transactions)
+    // ======================================================
+    
+    // GATHER IDs (For bulk deletes)
+    const userPosts = await Post.find({ user: userId });
+    const userPostIds = userPosts.map(p => p._id);
+    const userComments = await Comment.find({ user: userId });
+
+    // A. Fix Comment Counts on OTHER people's posts
+    const commentCountsToRemove = {};
+    userComments.forEach(c => {
+      const pId = c.post.toString();
+      commentCountsToRemove[pId] = (commentCountsToRemove[pId] || 0) + 1;
+    });
+
+    const bulkOps = Object.keys(commentCountsToRemove).map(postId => ({
+      updateOne: {
+        filter: { _id: postId },
+        update: { $inc: { commentsCount: -commentCountsToRemove[postId] } }
+      }
+    }));
+
+    if (bulkOps.length > 0) {
+      await Post.bulkWrite(bulkOps, { session });
+    }
+
+    // B. Delete Data
+    await Comment.deleteMany({ user: userId }, { session }); // My comments
+    await Comment.deleteMany({ post: { $in: userPostIds } }, { session }); // Comments on my posts
+    await Post.deleteMany({ _id: { $in: userPostIds } }, { session }); // My posts
+    
+    // C. Remove Likes & Follows
+    await Post.updateMany({ likes: userId }, { $pull: { likes: userId } }, { session });
+    await User.updateMany(
+        { $or: [{ followers: userId }, { following: userId }] },
+        { $pull: { followers: userId, following: userId } },
+        { session }
+    );
+
+    // D. Delete Chats (Nuclear Option)
+    const userChats = await Chat.find({ members: userId });
+    const chatIds = userChats.map(c => c._id);
+    await Message.deleteMany({ chat: { $in: chatIds } }, { session });
+    await Chat.deleteMany({ _id: { $in: chatIds } }, { session });
+
+    // E. Delete User
+    await User.findByIdAndDelete(userId, { session });
+
+    // COMMIT
+    await session.commitTransaction();
+    session.endSession();
+
+    res.clearCookie('token');
+    return res.json({ success: true, message: "Account deleted." });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Delete Account Error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};

@@ -1,9 +1,15 @@
 <script>
 import api from '@/services/api';
 import post from '@/store/modules/post';
+import DeleteAlert from '@/components/DeleteAlert.vue';
+
 import { mapActions, mapGetters } from 'vuex';
+import { faL } from '@fortawesome/free-solid-svg-icons';
 export default {
   name: 'Profile',
+  components:{
+    DeleteAlert
+  },
   data() {
     return {
       // user: {
@@ -41,9 +47,50 @@ export default {
       showSettings: false,
       showLike: null,
       logoutStatus: null,
+      deleteAlert:false,
+      showDeleteModal:false,
+      isDeleting:false,
+      showDeletePostModal:false,
+      postToDeleteId: null,
     }
   },
   methods: {
+    openDeletePostModal(id) {
+    this.postToDeleteId = id; // Remember which post
+    this.showDeletePostModal = true; // Show modal
+    this.showOptions = null; // Close the little menu
+  },
+
+  // 2. CONFIRM DELETE
+  async confirmDeletePost() {
+    if (!this.postToDeleteId) return;
+
+    try {
+      this.isDeleting = true;
+      // Call API
+      await api.get(`/delete-post/${this.postToDeleteId}`); // Note: ensure API is .delete, not .get
+
+      // Update UI
+      this.posts = this.posts.filter(post => post._id !== this.postToDeleteId);
+      
+      // Close Modal
+      this.showDeletePostModal = false;
+      this.postToDeleteId = null;
+
+    } catch (e) {
+      console.log(e);
+      alert("Failed to delete post");
+    } finally {
+      this.isDeleting = false;
+    }
+  },
+
+
+
+
+
+
+
     toggleOptions(id) {
       this.showOptions = this.showOptions === id ? null : id
     },
@@ -55,6 +102,48 @@ export default {
       // this.showLike? this.posts.find(e => e.id == id).likes ++ : this.posts.find(e => e.id == id).likes --
       this.posts.find(e => e.id == id).likes += this.showLike ? 1 : -1
     },
+    // async showDeleteAccountAlert(){
+    //   this.deleteAlert = true
+
+    // },
+async deleteAccount(){
+  try{
+    this.isDeleting = true
+    await api.get('/delete-account')
+  this.$router.push('/login')
+  }catch(e){
+    console.log(e)
+
+  }finally{
+    this.isDeleting = false
+  }
+},
+  // async deletePost(postId) {
+  //   // 1. Ask for confirmation so users don't delete by accident
+  //   const confirmDelete = confirm("Are you sure you want to delete this post?");
+  //   if (!confirmDelete) return;
+
+  //   try {
+  //     // 2. Call the API
+  //     await api.get(`/delete-post/${postId}`);
+
+  //     // 3. Optimistic Update: Remove it from the screen immediately
+  //     // This filters the 'posts' array to keep everything EXCEPT the one we deleted
+  //     this.posts = this.posts.filter(post => post._id !== postId);
+
+  //     // 4. Close the options menu
+  //     this.showOptions = null;
+
+  //   } catch (e) {
+  //     console.log(e);
+  //     alert("Failed to delete post");
+  //   }
+  // },
+  // DeletePostModal(id){
+  //   this.showDeletePostModal = true
+  // },
+
+    
     async handleLogout() {
       try {
         // const res = await api.get('/logout')
@@ -143,7 +232,7 @@ export default {
     v-if="showSettings"
     class="settings__options-container"
   >
-    <p class="danger">
+    <p class="danger" @click="showDeleteModal = true">
       <i class="bi bi-trash"></i>
       Delete Account
     </p>
@@ -164,6 +253,25 @@ export default {
       <p>{{ user.name }}</p>
       <span></span>
     </div>
+
+<!--    DELETE CONFIRMATION MESSAGE BOX -->
+
+
+<transition name="fade">
+      <DeleteAlert 
+        v-if="showDeleteModal"
+        title="Delete Account?"
+        message="You are about to permanently delete your account and all your data."
+        :loading="isDeleting"
+        @cancel="showDeleteModal = false"
+        @delete="deleteAccount"
+      />
+    </transition>
+
+
+
+
+
 
     <!-- PROFILE INFO -->
     <div class="profile__info">
@@ -234,8 +342,11 @@ export default {
                 <i class="bi bi-three-dots text-white" @click="toggleOptions(post._id)"></i>
 
                 <div v-if="showOptions === post._id" class="options">
-                  <p class="delete"><i class="bi bi-trash"></i> <span>Delete Post</span></p>
-                </div>
+    <p class="delete" @click="openDeletePostModal(post._id)">
+        <i class="bi bi-trash"></i> 
+        <span>Delete Post</span>
+    </p>
+</div>
               </div>
             </div>
 
@@ -263,10 +374,24 @@ export default {
         </div>
       </div>
     </div>
+    <transition name="fade">
+    <DeleteAlert 
+      v-if="showDeletePostModal"
+      title="Delete Post?"
+      :message="`Are you sure you want to remove this post? Id: ${postToDeleteId}`"
+      :loading="isDeleting"
+      @cancel="showDeletePostModal = false"
+      @delete="confirmDeletePost"
+    />
+  </transition>
   </div>
 </template>
 
 <style scoped>
+
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap');
+
+
 .profile-page {
   background: rgb(32, 17, 6);
   
@@ -406,6 +531,10 @@ export default {
   font-size: 1.4rem;
   margin: 0;
 }
+
+
+/* DELETE ALERT BOX */
+
 
 /* INFO */
 .profile__info {
