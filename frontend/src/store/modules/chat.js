@@ -1,47 +1,34 @@
+// store/modules/chat.js
+import api from '@/services/api';
+
 export default {
-    namespaced: true,
-  
-    state: () => ({
-      chats: [
-        {
-          id: 1,
-          user: {
-            name: "Dheema",
-            avatar: "https://i.pravatar.cc/150?img=12",
-            online: true,
-            lastSeen: "10:30 AM"
-          },
-          messages: [
-            { text: "Hey ☕🐱", time: "10:40", me: false },
-            { text: "Coffee Cat is cute!", time: "10:41", me: true }
-          ]
-        },
-        {
-          id: 2,
-          user: {
-            name: "Arjun",
-            avatar: "https://i.pravatar.cc/150?img=32",
-            online: false,
-            lastSeen: "Yesterday"
-          },
-          messages: [
-            { text: "You free today?", time: "9:00", me: false }
-          ]
-        }
-      ],
-      activeChatId: null
-    }),
-  
-    mutations: {
-      SET_ACTIVE_CHAT(state, chatId) {
-        state.activeChatId = chatId
+  namespaced: true,
+  state: {
+    activeChat: null, // This will hold the object you pasted
+  },
+  mutations: {
+    SET_ACTIVE_CHAT(state, chat) {
+      state.activeChat = chat;
+    }
+  },
+  actions: {
+    // Optional: Action to fetch chat if it's missing (e.g., on page refresh)
+    async fetchChatById({ commit }, chatId) {
+      try {
+        const res = await api.get(`/chat/${chatId}`); // Adjust your endpoint API
+        commit('SET_ACTIVE_CHAT', res.data.chat);
+      } catch (error) {
+        console.error("Failed to fetch chat", error);
       }
     },
-  
-    getters: {
-      activeChat(state) {
-        return state.chats.find(c => c.id === state.activeChatId)
-      }
+    async fetchChatByUser({commit}, userId){
+        const res = await api.post(`/chat/user/${userId}`)
+        console.log(res.data.chat)
+        commit('SET_ACTIVE_CHAT',res.data.chat)
     }
+  },
+  getters: {
+    activeChat: state => state.activeChat,
+    activeChatId : state => state.activeChat?._id
   }
-  
+};

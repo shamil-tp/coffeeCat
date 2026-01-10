@@ -138,17 +138,29 @@ export default {
     <!-- HEADER -->
     <div class="profile__header">
       <i class="bi bi-gear settings__icon" @click="showSettingsModal(3)"></i>
-      <div v-show="showSettings" class="settings__options-container">
-        <p class="text-danger" style="border-bottom:2px solid rgb(77, 31, 5)"><i class="bi bi-trash"></i> Delete Account
-        </p>
-        <p class="text-danger" @click="handleLogout">
-        <div class="spinner-border spinner-border-sm" role="status" v-if="this.logoutStatus"
-          :style="{ color: '#ff6b6b' }">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-        <i class="bi bi-power" v-else></i>
-        Log out</p>
-      </div>
+      <transition name="settings-pop">
+  <div
+    v-if="showSettings"
+    class="settings__options-container"
+  >
+    <p class="danger">
+      <i class="bi bi-trash"></i>
+      Delete Account
+    </p>
+
+    <p class="danger" @click="handleLogout">
+      <div
+        class="spinner-border spinner-border-sm"
+        role="status"
+        v-if="logoutStatus"
+        :style="{ color: '#ff6b6b' }"
+      ></div>
+      <i class="bi bi-power" v-else></i>
+      Log out
+    </p>
+  </div>
+</transition>
+
       <p>{{ user.name }}</p>
       <span></span>
     </div>
@@ -297,30 +309,93 @@ export default {
 }
 
 .settings__options-container {
-  /* width: 200px; */
+  /* width: 20%; */
   position: absolute;
-  top: 8%;
-  left: 1.5%;
-  border-radius: 7px;
-  padding: 5px;
-  background-color: rgb(56, 24, 5);
-  border: 2px solid rgb(77, 31, 5);
-  /* transform: translate(300px, 100px); */
-  transition: 1s ease-in-out;
-  display: flex;
-  justify-content: center;
-  align-items: start;
-  flex-direction: column;
+  top: 55px;
+  left: 12px;
 
+  background: linear-gradient(
+    145deg,
+    rgb(66, 28, 6),
+    rgb(44, 18, 4)
+  );
+
+  border-radius: 12px;
+  padding: 7px;
+  min-width: 190px;
+
+  border: 1px solid rgb(97, 42, 10);
+
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  z-index: 50;
+
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
+
 
 .settings__options-container p {
-  font-weight: 600;
   display: flex;
-  justify-content: center;
   align-items: center;
-  /* flex-direction: column; */
+  gap: 10px;
+
+  padding: 2.5px 3.5px;
+  margin-bottom: 100px;
+
+  font-weight: 500;
+  font-size: .7rem;
+
+  border-radius: 10px;
+  cursor: pointer;
+
+  background: rgb(51, 21, 5);
+  border: 1px solid rgb(97, 42, 10);
+
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  transition: all 0.25s ease;
 }
+
+.settings__options-container p:last-child {
+  margin-bottom: 0;
+}
+
+.settings__options-container p.danger {
+  color: #ff6b6b;
+}
+
+.settings__options-container p:hover {
+  transform: translateY(-1px);
+  background: rgb(61, 26, 7);
+}
+
+.settings__options-container p:active {
+  transform: scale(0.97);
+  background: #8c2727;
+}
+
+
+.settings-pop-enter-active,
+.settings-pop-leave-active {
+  transition: all 0.25s ease;
+}
+
+.settings-pop-enter-from {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+}
+
+.settings-pop-leave-to {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+}
+
 
 
 .profile__header i {
@@ -575,7 +650,7 @@ export default {
   font-size: 1.25rem;
   font-weight: 700;
   background: rgb(51, 34, 28);
-  padding: 3px;
+  padding: 3px 30px 3px 30px;
   border-radius: 7px;
   display: flex;
   justify-content: center;
@@ -585,6 +660,9 @@ export default {
   span {
     font-size: .8rem;
   }
+}
+.delete:active{
+  background-color: #8c2727;
 }
 
 .left {

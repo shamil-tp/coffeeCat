@@ -12,7 +12,10 @@ const {
     AddComment, 
     GetComments, 
     ToggleLike,
-    FindUserChat
+    FindUserChat,
+    GetChat,
+    GetMessages,
+    GetAllUserChats
 } = require('../controllers/mainController')
 
 router
@@ -51,6 +54,15 @@ router
 router
     .route('/chat/user/:id')
     .post(FindUserChat)
+router
+    .route('/chat/:id')
+    .get(GetChat)
+router
+    .route('/messages/:chatId')
+    .get(GetMessages)
+router
+    .route('/fetch-all-user-chats/:id')
+    .get(GetAllUserChats)
 // router
 //     .route('/chat/:id')
 //     .post(FindChat)

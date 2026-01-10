@@ -1,7 +1,7 @@
 <script>
 import api from '@/services/api';
 import post from '@/store/modules/post';
-import { mapGetters } from 'vuex';
+import { mapActions, mapGetters } from 'vuex';
 export default {
   name: 'ViewProfile',
   data() {
@@ -13,19 +13,32 @@ export default {
       showSettings: false,
       showLike: null,
       logoutStatus: null,
+      loading:false,
     }
   },
   methods: {
     toggleOptions(id) {
       this.showOptions = this.showOptions === id ? null : id
     },
+    ...mapActions('chat',['fetchChatByUser'])
+    ,
     async startMessage(){
       try{
-        let res = await api.post(`/chat/user/${this.profile._id}`)
-        this.$router.push(`/chat/${res.data.chat._id}`)
-        console.log(res.data.chat)
+        //    API REQUEST WITHOUT VUEX
+        // let res = await api.post(`/chat/user/${this.profile._id}`)
+        // this.$router.push(`/chat/${res.data.chat._id}`)
+        // console.log(res.data.chat)
+        this.loading = true
+        await this.fetchChatByUser(this.profile._id)
+        console.log(this.chatId)
+        this.$router.push(`/chat/${this.chatId}`)
+
+        //    API REQUEST WITH VUEX
+
       }catch(e){
         console.log(e)
+      }finally{
+        this.loading = false
       }
     },
     async toggleLike(id) {
@@ -107,6 +120,9 @@ export default {
 
   },
   computed: {
+    ...mapGetters("chat",{
+      chatId:"activeChatId"
+    }),
     ...mapGetters("auth", {
       currentUser: "userDetails",
       loggedIn: "isLoggedIn"
@@ -180,7 +196,11 @@ export default {
       {{ isFollowing ? 'Unfollow' : 'Follow' }}
     </button>
     
-    <button class="share" @click="startMessage">Message</button>
+    <button class="share" @click="startMessage">
+      <font-awesome-icon icon="spinner" spin-pulse size="lg" v-if="loading"  class="spinning"/>
+      <span v-else="loading">Message</span>
+    </button>
+    
 </div>
     </div>
 
@@ -412,6 +432,10 @@ export default {
   color: rgb(51, 34, 28);
   border: 1px solid transparent;
   transform: scale(1.03);
+}
+.spinning{
+  color: #ffb78e;
+  /* background-color: #ff6b6b; */
 }
 /* Style for when you are already following */
 .following-style {

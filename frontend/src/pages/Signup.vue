@@ -186,6 +186,8 @@ export default {
   padding: 1.8rem;
   border-radius: 18px;
   text-align: center;
+  box-shadow: inset 0 1px 2px rgb(95, 74, 74),0 2px 4px rgb(20, 20, 20),0 4px 8px rgb(51, 34, 28);
+
 }
 
 /* AVATAR */
@@ -200,6 +202,8 @@ export default {
   justify-content: center;
   cursor: pointer;
   border: 2px dashed #ffb78e;
+  box-shadow: inset 0 2px 4px rgb(95, 74, 74),0 4px 8px rgb(20, 20, 20),0 5px 10px rgb(51, 34, 28);
+
 }
 
 .avatar-placeholder span {
@@ -234,6 +238,8 @@ input {
   outline: none;
   background: rgb(32, 17, 6);
   color: rgb(255, 222, 179);
+  box-shadow: inset 0 1px 2px rgb(95, 74, 74),0 2px 4px rgb(20, 20, 20),0 4px 8px rgb(51, 34, 28);
+
 }
 
 input::placeholder {

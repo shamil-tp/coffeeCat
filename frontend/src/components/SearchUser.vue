@@ -1,6 +1,6 @@
 <script>
 import api from '@/services/api';
-
+import { mapActions, mapGetters } from 'vuex';
 export default {
   name: 'SearchUser',
   data() {
@@ -22,6 +22,11 @@ export default {
       // username:null,
     }
   },
+  computed:{
+    ...mapGetters('chat',{
+      chatId:'activeChatId'
+    })
+  },
   methods: {
     goBack() { this.$emit('close') },
     async searchUser() {
@@ -41,6 +46,27 @@ export default {
       this.loading = true
       this.$router.push(`/view-profile/${this.user._id}`)
     },
+    ...mapActions('chat',['fetchChatByUser'])
+    ,
+    async startMessage(){
+      try{
+        //    API REQUEST WITHOUT VUEX
+        // let res = await api.post(`/chat/user/${this.profile._id}`)
+        // this.$router.push(`/chat/${res.data.chat._id}`)
+        // console.log(res.data.chat)
+        this.loading = true
+        await this.fetchChatByUser(this.user._id)
+        console.log(this.chatId)
+        this.$router.push(`/chat/${this.chatId}`)
+
+        //    API REQUEST WITH VUEX
+
+      }catch(e){
+        console.log(e)
+      }finally{
+        this.loading = false
+      }
+    }
   }
 }
 </script>

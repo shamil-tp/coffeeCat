@@ -101,6 +101,7 @@ export default {
   padding: 1.8rem;
   border-radius: 18px;
   text-align: center;
+  box-shadow: inset 0 1px 2px rgb(95, 74, 74),0 2px 4px rgb(20, 20, 20),0 4px 8px rgb(51, 34, 28);
 }
 
 .auth-card h2 {
@@ -123,6 +124,8 @@ input {
   outline: none;
   background: rgb(32, 17, 6);
   color: rgb(255, 222, 179);
+  box-shadow: inset 0 1px 2px rgb(95, 74, 74),0 2px 4px rgb(20, 20, 20),0 4px 8px rgb(51, 34, 28);
+
 }
 
 input::placeholder {
@@ -139,6 +142,8 @@ button {
   font-weight: 600;
   background: #ffb78e;
   color: rgb(51, 34, 28);
+  box-shadow: inset 0 1px 2px rgb(95, 74, 74),0 2px 4px rgb(20, 20, 20),0 4px 8px rgb(51, 34, 28);
+
 }
 
 .switch {

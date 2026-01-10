@@ -27,18 +27,38 @@ export default {
     },
     async listUsers() {
       try {
-        let res = await api.get('/all-users-list')
+        //    THIS IS FOR LISTING ALL USER USE THIS FOR THE ADMIN PAGE
+        // let res = await api.get('/all-users-list')
+        // this.users = res.data.users
+        // console.log(res.data.success)
+        // return console.log(res.data.message)
+
+        //    CREATE MESSAGE LIST USING CHATS FROM DB
+        let res = await api.get(`/fetch-all-user-chats/${this.currentUser._id}`)
+        console.log(res.data.users)
         this.users = res.data.users
-        console.log(res.data.success)
-        return console.log(res.data.message)
       } catch (e) {
         console.log(e)
         return console.log(e.message)
       }
     }
+  },mounted() {
+    // 2. Try to fetch immediately (works if navigating from another page)
+    if (this.currentUser) {
+      this.listUsers();
+    }
   },
-  mounted() {
-    this.listUsers()
+  watch: {
+    // 3. The "Backup Plan" (works on Page Refresh)
+    // Whenever currentUser changes from 'null' to 'Object', run this:
+    currentUser: {
+      immediate: true, // Run immediately if data exists
+      handler(newUser) {
+        if (newUser) {
+           this.listUsers();
+        }
+      }
+    }
   },
   computed: {
     ...mapGetters('auth', {
@@ -175,6 +195,8 @@ export default {
   border-radius: 14px;
   margin-bottom: 0.7rem;
   cursor: pointer;
+  box-shadow: inset 0 1px 2px rgb(95, 74, 74),0 1px 2px rgb(20, 20, 20),0 2px 4px rgb(51, 34, 28);
+
   transition: transform 0.2s ease, background-color 0.2s ease;
 }
 

@@ -1,26 +1,60 @@
 <script>
 import api from '@/services/api';
+import { mapActions, mapGetters } from 'vuex';
+import socket from '@/services/socket';
+import MessageBubble from '@/components/MessageBubble.vue';
+import ViewProfile from './ViewProfile.vue';
 
   export default {
+    components: {MessageBubble},
     name: 'Chat',
     data() {
       return {
-        id:null,
+        // id:null,
         userId:null,
         message: '',
+        messages:[],
         isFocused: false,
-        user: null,
-        backClicked: false
+        // user: null,
+        backClicked: false,
+        peopleCount:0,
+        // reciver:null,
       }
     },
     computed: {
+      ...mapGetters('chat',{
+        chat:'activeChat'
+      }),
+      ...mapGetters('auth',{
+        currentUser:'userDetails'
+      }),
       showSend() {
         return this.isFocused || this.message.length > 0
       },
+      receiver(){
+        if (!this.chat || !this.currentUser) return null;
+        return this.chat.members.find(member => member._id !== this.currentUser._id)
+      },
     },
     methods: {
+      goToViewProfile(){
+        this.$router.push(`/view-profile/${this.receiver._id}`)
+      },
+      ...mapActions('chat', ['fetchChatById']),
       sendMessage() {
         if (!this.message.trim()) return
+        const messageData = {
+        _id: Date.now(), // Temporary ID until DB saves it
+        text: this.message,
+        sender: this.currentUser,
+        chatId: this.chat._id,
+        createdAt: new Date().toISOString()
+      };
+      // 3. Emit to Server
+      socket.emit("new_message", messageData);
+
+      // 4. Update UI immediately (Optimistic UI)
+      this.messages.push(messageData);
         console.log('Sending:', this.message)
         this.message = ''
       },
@@ -34,47 +68,127 @@ import api from '@/services/api';
   },
       async fetchUserChat(){
         try{
-          let res = await api.get(`/find-user-chat/${this.$route.params.id}`)
-          this.user = res.data.user
-          console.log(res.data.success)
+          
         }catch(e){
           console.log(e)
           return console.log()
         }
       }
     },
-    mounted(){
-      this.fetchUserChat()
+
+async created() {
+    // ... (keep your existing fetch logic) ...
+    const routeId = this.$route.params.id;
+
+    // If chat isn't in Vuex, fetch it
+    if (!this.chat || this.chat._id !== routeId) {
+       await this.fetchChatById(routeId);
     }
+    
+    try {
+      const { data } = await api.get(`/messages/${routeId}`);
+      this.messages = data; // Fill the array with history
+    } catch (error) {
+      console.log("Failed to load messages", error);
+    }
+
+    // Now you can log it (use 'this.')
+    console.log("Receiver:", this.receiver); 
+    // 2. Connect to the WebSocket
+    socket.connect();
+    socket.emit("join_chat", this.chat._id,this.receiver._id);
+
+    // 6. Listen for incoming messages
+    socket.on("message_received", (newMessage) => {
+      console.log("Message received:", newMessage);
+      this.messages.push(newMessage);
+    });
+
+    //    USER COUNT TO CHECK IF USER ONLINE AND MESSAGE SEEN
+    
+    socket.on("people_count",(count)=>{
+      this.peopleCount = count
+    })
+    
+    socket.on("messages_read", () => {
+      console.log("Messages were read by user");
+      // Loop through messages and mark my own unread messages as seen locally
+      this.messages.forEach(msg => {
+        if (msg.sender._id === this.currentUser._id) {
+            msg.seen = true;
+        }
+      });
+    });
+
+    socket.on("connect", () => {
+      console.log("✅ Socket Connected! ID:", socket.id);
+    });
+  },
+
+  beforeUnmount() {
+    // 3. Disconnect when leaving the page to save resources
+    console.log("❌ Disconnecting Socket...");
+    socket.disconnect();
+    // Also remove listeners to prevent memory leaks
+    socket.off("connect");
+
+    socket.off("message_received"); // Stop listening
+    // socket.disconnect();
+  }
+
+
+
+
+
+
+
+
+    // mounted(){
+    //   this.fetchUserChat()
+    //   this.reciver = this.setReceiver()
+    // }
   }
   </script>
 <template>
   <div class="chat-page">
 
     <!-- 🔥 CHAT HEADER -->
-    <div class="chat-header" v-if="user">
+    <div class="chat-header" v-if="receiver">
       <!-- <i class="bi bi-arrow-left" @click="goBack"></i> -->
       <!-- <router-link :to="this.router.back()" > -->
         <font-awesome-icon
   :icon="backClicked ? ['fas','angles-left'] : ['fas','angle-left']"
   class="angle"
-  size="lg"
+  size="xl"
   @click="goBack"
 />
 
       <!-- </router-link> -->
+      <img :src="receiver.avatar" class="avatar" @click="goToViewProfile"/>
 
-      <img :src="user.avatar" class="avatar" />
-
-      <p class="name">{{ user.name }}</p>
+      <!-- <p class="name">{{ receiver.name }}</p> -->
+       <div class="header-info">
+    <p class="name">{{ receiver.name }}</p>
+    
+    <p class="status">
+       <span v-if="peopleCount > 1" class="online-text">
+         <span class="dot"></span> Online
+       </span>
+       <span v-else class="offline-text">Offline</span>
+    </p>
+  </div>
     </div>
 
     <!-- CHAT BODY -->
     <div class="chat-body">
-      <div class="bubble received">Hey 👋</div>
-      <div class="bubble sent">Hi! How are you?</div>
-      <div class="bubble received">Did you eat?</div>
-    </div>
+  <MessageBubble 
+        v-for="msg in messages" 
+        :key="msg._id" 
+        :msg="msg" 
+        :peopleCount="peopleCount"
+        :currentUser="currentUser"
+      />
+</div>
 
     <!-- INPUT BAR -->
     <div class="chat-input">
@@ -87,8 +201,12 @@ import api from '@/services/api';
         @keyup.enter="sendMessage"
       />
 
-      <i v-if="!showSend" class="bi bi-image"></i>
-      <i v-else class="bi bi-send-fill send" @click="sendMessage"></i>
+      <!-- <i v-if="!showSend" class="bi bi-image"></i> -->
+      <font-awesome-icon v-if="!showSend" size="xl" icon="fa-regular fa-image" class="spinning" />
+      <!-- <i v-else class="bi bi-send-fill send" @click="sendMessage"></i> -->
+      <font-awesome-icon :icon="['fas','paper-plane']"   rotateBy
+  style="--fa-rotate-angle: 45deg" size="lg" v-else  class="spinning" @click="sendMessage "/>
+
     </div>
 
   </div>
@@ -153,6 +271,39 @@ import api from '@/services/api';
   margin: 0;
 }
 
+.header-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.status {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.online-text {
+  color: #4cd137; /* Green */
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.offline-text {
+  color: rgba(255, 222, 179, 0.5);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  background-color: #4cd137;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 5px #4cd137;
+}
+
+
 /* BODY */
 .chat-body {
   flex: 1;
@@ -210,11 +361,14 @@ import api from '@/services/api';
 
   background: rgb(51, 34, 28);
   color: rgb(255, 222, 179);
-  font-size: 0.9rem;
+  font-size: 1rem;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .chat-input input::placeholder {
   color: #ffb78e;
+  font-family: monospace;
+  font-weight: 600;
   opacity: 0.7;
 }
 
@@ -229,5 +383,8 @@ import api from '@/services/api';
   transform: rotate(45deg);
 }
 
+.spinning{
+  color: #ffb78e;
+}
 
 </style>  

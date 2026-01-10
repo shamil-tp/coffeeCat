@@ -2,7 +2,7 @@ const User = require("../models/User");
 const Post = require("../models/Post");
 const Comment = require('../models/Comment');
 const Chat = require('../models/Chat')
-// const Message = require('../models/Message')
+const Message = require('../models/Message')
 const uploadImage = require("../utils/uploadImage");
 
 exports.UserDetails = async (req, res) => {
@@ -359,5 +359,90 @@ exports.FindUserChat = async (req,res) =>{
   }catch(e){
     console.log(e)
     return res.status(500).json({message:'error finding profile chat',success:false})
+  }
+}
+exports.GetChat = async (req,res) =>{
+  try{
+    let chat = await Chat.findOne({_id:req.params.id}).populate('members','_id username name avatar')
+    // if(!chat){
+    //   let newChat = await Chat.create({
+    //     members:[req.params.id,req.user.id]
+    //   })
+    //   await newChat.populate('members','_id username name avatar')
+    //   console.log(newChat)
+    //   return res.status(200).json({message:'new chat created',success:true,chat:newChat})
+    // }
+    return res.status(200).json({message:'chat send',success:true,chat:chat})
+  }catch(e){
+    console.log(e)
+    return res.status(500).json({message:'error finding chat',success:false})
+  }
+}
+
+exports.GetMessages = async(req,res) =>{
+  try {
+    const messages = await Message.find({ chat: req.params.chatId })
+      .populate("sender", "name avatar email")
+      .sort({ createdAt: 1 }); // Sort by oldest to newest
+
+    res.json(messages);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+}
+// controllers/mainController.js
+
+exports.GetAllUserChats = async (req, res) => {
+  try {
+    const currentUserId = req.params.id;
+
+    // 1. Find chats & Populate details
+    // Sort by 'updatedAt: -1' so the newest messages appear at the top
+    const userChats = await Chat.find({ 
+      members: { $in: [currentUserId] } 
+    })
+    .populate('members', 'name username avatar bio') // 👈 Get name/avatar
+    .populate('lastMessage') // 👈 Get the last text preview
+    .sort({ updatedAt: -1 });
+
+    if (!userChats || userChats.length === 0) {
+      // Return empty array (Status 200), not an error
+      return res.status(200).json({ users: [], success: true });
+    }
+
+    // 2. Transform Data for Frontend
+    // We need to extract the "Other Person" from each chat
+    const formattedChats = userChats.map(chat => {
+        
+        // Find the member who is NOT the current user
+        const otherUser = chat.members.find(
+            member => member._id.toString() !== currentUserId.toString()
+        );
+
+        if (!otherUser) return null;
+
+        // Return a hybrid object:
+        // - ID = Chat ID (so router.push works)
+        // - Name/Avatar = Other User's info
+        // - Bio = The last message (like WhatsApp)
+        return {
+            _id: chat._id, // 👈 IMPORTANT: Use Chat ID here for navigation
+            name: otherUser.name,
+            avatar: otherUser.avatar,
+            // If there is a lastMessage, show it. Otherwise show their bio.
+            bio: chat.lastMessage ? chat.lastMessage.text : otherUser.bio, 
+            updatedAt: chat.updatedAt
+        };
+    }).filter(Boolean); // Remove any nulls
+
+    return res.status(200).json({ 
+        message: "Chats fetched", 
+        users: formattedChats, // Frontend calls this "users"
+        success: true 
+    });
+
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json({ error: e.message, success: false });
   }
 }
