@@ -1,11 +1,12 @@
 const sendCookie = async (user, res) => {
     try {
         const token = await user.getJwtToken()
+        const isProduction = process.env.NODE_ENV === 'production';
         const options = {
             expires: new Date(Date.now() + (7 * 60 * 60 * 1000)),
             httpOnly: true,
-            secure:false,
-            sameSite:'Lax',
+            secure: isProduction ? true : false,
+            sameSite: isProduction ? 'None' : 'Lax',
             path:'/'
         }
   

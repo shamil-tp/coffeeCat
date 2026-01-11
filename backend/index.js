@@ -15,6 +15,8 @@ const Chat = require('./models/Chat')
 
 const app = express()
 
+app.set('trust proxy', 1);
+
 const server = http.createServer(app);
 
 // 2. Initialize Socket.io and attach it to the server
@@ -195,7 +197,7 @@ const port = process.env.PORT || 3000
 // });
 
 server.listen(port, () => {
-    console.log(`Server running on http://192.168.29.178:${port}`)
+    console.log(`Server running on port:${port}`)
     connectDB()
     connectCloudinary()
 });
