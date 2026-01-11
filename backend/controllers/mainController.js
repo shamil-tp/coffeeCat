@@ -583,3 +583,67 @@ exports.DeleteAccount = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+exports.TotalSummary = async (req, res) => {
+  try {
+    const [totalUsers, totalPosts, totalComments, totalChats] = await Promise.all([
+      User.countDocuments(),
+      Post.countDocuments(),
+      Comment.countDocuments(),
+      Chat.countDocuments()
+    ]);
+
+    const usersWithCounts = await User.aggregate([
+      { $lookup: { from: 'posts', localField: '_id', foreignField: 'user', as: 'user_posts' } },
+      { $addFields: { posts: { $size: "$user_posts" }, status: 'Active' } },
+      { $project: { user_posts: 0, password: 0 } },
+      { $sort: { createdAt: -1 } },
+      // { $limit: 10 }
+    ]);
+
+    const postsWithAuthor = await Post.aggregate([
+      { $lookup: { from: 'users', localField: 'user', foreignField: '_id', as: 'post_author' } },
+      { $unwind: '$post_author' },
+      { $project: { image: 1, caption: 1, author: "$post_author.name", likes: { $size: "$likes" }, commentsCount: 1, createdAt: 1 } },
+      { $sort: { createdAt: -1 } },
+      // { $limit: 10 }
+    ]);
+
+    const userGrowthRaw = await User.aggregate([
+      { $group: { _id: { month: { $month: "$createdAt" }, year: { $year: "$createdAt" } }, count: { $sum: 1 } } },
+      { $sort: { "_id.year": 1, "_id.month": 1 } }
+    ]);
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const postActivityRaw = await Post.aggregate([
+      { $match: { createdAt: { $gte: sevenDaysAgo } } },
+      { $group: { _id: { $dayOfWeek: "$createdAt" }, count: { $sum: 1 } } }
+    ]);
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const chatGrowthRaw = await Chat.aggregate([
+      { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+      { $group: { _id: { month: { $month: "$createdAt" }, day: { $dayOfMonth: "$createdAt" } }, count: { $sum: 1 } } },
+      { $sort: { "_id.month": 1, "_id.day": 1 } }
+    ]);
+
+    const stats = { totalUsers, totalPosts, totalComments, totalChats };
+
+    return res.status(200).json({
+      success: true,
+      stats,
+      usersWithCounts,
+      postsWithAuthor,
+      userGrowthRaw,
+      postActivityRaw,
+      chatGrowthRaw
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};

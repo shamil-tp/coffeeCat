@@ -17,7 +17,8 @@ const {
     GetMessages,
     GetAllUserChats,
     DeletePost,
-    DeleteAccount
+    DeleteAccount,
+    TotalSummary
 } = require('../controllers/mainController')
 
 router
@@ -71,6 +72,9 @@ router
 router
     .route('/delete-account')
     .get(DeleteAccount)
+router
+    .route('/total-summary')
+    .get(TotalSummary)
 // router
 //     .route('/chat/:id')
 //     .post(FindChat)

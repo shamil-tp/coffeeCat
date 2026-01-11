@@ -11,6 +11,7 @@ import Login from "@/pages/Login.vue";
 import Signup from "@/pages/Signup.vue";
 import EditProfile from "@/components/EditProfile.vue";
 import ViewProfile from "@/components/ViewProfile.vue";
+import AdminDashboard from "@/pages/admin/AdminDashboard.vue";
 
 const routes = [
   {
@@ -70,8 +71,13 @@ const routes = [
     meta: { navBar: false },
   },
   {
+    path: '/admin',
+    component: AdminDashboard,
+    meta: {navBar:false}
+  },
+  {
     path: "/auth",
-    Component: MainLayout,
+    component: MainLayout,
     children: [
       { path: "/login", component: Login, meta: { navBar: false } },
       { path: "/signup", component: Signup, meta: { navBar: false } },

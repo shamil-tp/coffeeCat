@@ -4,7 +4,7 @@ import post from '@/store/modules/post';
 import DeleteAlert from '@/components/DeleteAlert.vue';
 
 import { mapActions, mapGetters } from 'vuex';
-import { faL } from '@fortawesome/free-solid-svg-icons';
+// import { faL } from '@fortawesome/free-solid-svg-icons';
 export default {
   name: 'Profile',
   components:{
