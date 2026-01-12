@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 
-const URL = "http://localhost:3000"; 
+const URL = import.meta.env.VITE_BACKEND_URL; 
 
 const socket = io(URL, {
   autoConnect: false // We will connect manually when the user logs in or opens chat
