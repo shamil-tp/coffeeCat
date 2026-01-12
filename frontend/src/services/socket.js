@@ -3,7 +3,9 @@ import { io } from "socket.io-client";
 const URL = import.meta.env.VITE_BACKEND_URL; 
 
 const socket = io(URL, {
-  autoConnect: false // We will connect manually when the user logs in or opens chat
+  autoConnect: false, 
+  withCredentials: true,       // CRITICAL: Allows cookies to be sent for auth
+  transports: ["websocket"]    // CRITICAL: Forces WebSocket only (Fixes "Interrupted" error)
 });
 
 // A helper to verify connection in console

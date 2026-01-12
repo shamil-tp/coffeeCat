@@ -22,10 +22,11 @@ const server = http.createServer(app);
 // 2. Initialize Socket.io and attach it to the server
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL, // ⚠️ REPLACE with your Vue frontend URL
+    origin: process.env.FRONTEND_URL, // Ensure this matches Vercel URL exactly (no trailing slash)
     methods: ["GET", "POST"],
-    credentials:true
-  }
+    credentials: true
+  },
+  transports: ["websocket", "polling"] // 👈 Add this line to ensure compatibility
 });
 
 app.use(cors({
