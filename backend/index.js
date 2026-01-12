@@ -28,6 +28,11 @@ const io = new Server(server, {
   }
 });
 
+app.use(cors({
+  origin:process.env.FRONTEND_URL,
+  credentials: true
+}));
+
 // 3. Create a connection event (The "Phone Operator")
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
@@ -157,10 +162,7 @@ app.use(cookieParser())
 //   "http://192.168.29.178:5173"
 // ];
 
-app.use(cors({
-  origin:process.env.FRONTEND_URL,
-  credentials: true
-}));
+
 
 
 
